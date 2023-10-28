@@ -1,0 +1,78 @@
+{% extends 'core/base.html' %}
+
+{% load humanize %}
+
+{% block content %} 
+    <div class="container">
+        <div class="columns">
+            <div class="column is-12">
+                <h1 class="title">Search</h1>
+
+                <p>Search term: "{{ query }}"</p>
+
+                <hr>
+
+                <form method="get" action="{% url 'search' %}">
+                    <div class="field">
+                        <div class="control">
+                            <input type="text" class="input" name="query" value="{{ query }}">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="control">
+                            <button class="button is-success">Search</button>
+                        </div>
+                    </div>
+                </form>
+
+                <hr>
+
+                <div class="search-results">
+                    {% if not chatters and not chats %} 
+                    <p>No results, please try a different search.</p>
+                    {% endif %} 
+
+                    {% if chatters %} 
+                        <strong>Chatters</strong>
+
+                        {% for chatter in chatters %}
+                        <p><a href="{% url 'chatterprofile' chatter.username %}">{{ chatter.username }}</a></p>
+                        {% endfor %}
+                    {% endif %} 
+
+                    {% if chats %} 
+                        <strong>Chats</strong>
+
+                        <div class="wrapper-chatters">
+                            {% for chat in chatters %} 
+                            <div class="chat">
+                                <article class="media">
+                                    <figure class="media-left">
+                                        <p class="image is-64x64">
+                                            {% if chat.created_by.chatterprofile.avatar %}
+                                                <img src="{{ chat.created_by.chatterprofile.avatar.url }}">
+                                            {% endif %}
+                                        </p>
+                                    </figure>
+    
+                                    <div class="media-content">
+                                        <div class="content">
+                                            <p>
+                                                <strong><a href="{% url 'chatterprofile' chat.created_by.username %}">{{ chat.created_by.username }}</a></strong>
+                                                <small>{{ chat.created_at|naturaltime }}</small>
+                                                <br>
+                                                {{ chat.body }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </article>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %} 
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends 'core/base.html' %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="container" id="feedapp">
+        <div class="columns">
+            <div class="column is-12">
+                <div class="wrapper-form">
+                    <form v-on:submit.prevent="submitChatter()">
+                        <div class="field">
+                            <div class="control">
+                                <textarea class="textarea" v-model="body" placeholder="What's on your mind?"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <div class="control">
+                                <button class="button is-success">Submit</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="wrapper-chatters">
+                    <div class="chat" v-for="chat in chatters">
+                        <article class="media">
+                            <figure class="media-left">
+                                <p class="image is-64x64">
+                                    <img :src="chatter.avatar">
+                                </p>
+                            </figure>
+
+                            <div class="media-content">
+                                <div class="content">
+                                    <p>
+                                        <strong>[[ chat.chatter ]]</strong>
+                                        <small>[[ chat.created_at ]]</small>
+                                        <br>
+                                        [[ chat.body ]]
+                                    </p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    {% for chat in chatters %}
+                        <div class="chat">
+                            <article class="media">
+                                <figure class="media-left">
+                                    <p class="image is-64x64">
+                                        {% if chat.created_by.chatterprofile.avatar %}
+                                            <img src="{{ chat.created_by.chatterprofile.avatar.url }}">
+                                        {% endif %}
+                                    </p>
+                                </figure>
+
+                                <div class="media-content">
+                                    <div class="content">
+                                        <p>
+                                            <strong><a href="{% url 'chatterprofile' chat.created_by.username %}">{{ chat.created_by.username }}</a></strong>
+                                            <small>{{ chat.created_at|naturaltime }}</small>
+                                            <br>
+                                            {{ chat.body }}
+                                            <br>
+                                            <a @click="likeChat({{ chat.id}})" v-if="!liked_chats.includes({{ chat.id }})">Like</a>
+                                            <span v-if="liked_chats.includes({{ chat.id }})">Liked</span>
+                                            <small id="likes-{{ chat.id }}">{{ chat.likes.count }} likes</small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+    new Vue({
+        el: '#feedapp',
+        delimiters: ['[[', ']]'],
+        data () {
+            return {
+                chats: [],
+                body: '',
+                chatter: '{{ request.user.username }}',
+                created_at: 'Now',
+                avatar: '{% if request.user.chatterprofile.avatar %}{{ request.user.chatterprofile.avatar.url }}{% endif %}',
+                liked_chats: '[{% for chat in chatters %}{% if chat.liked %}{{ chat.id }},{% endif %}{% endfor %}]'
+            }
+        },
+        methods: {
+            likeChat(chat_id) {
+                this.liked_chats.push(parseInt(chat_id));
+
+                var chat = {
+                    'chat_id': chat_id
+                };
+
+                fetch('/api/add_like/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(chat)
+                })
+                .then((response) => {
+                    console.log(response);
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+
+                const el = document.getElementById('likes-' + chat_id);
+                const likes = parseInt(el.innerHTML.split(' ')[0] + 1);
+                el.innerHTML = likes + ' likes';  
+            },
+            submitChatter() {
+                console.log('submitChatter');
+
+                if (this.body.length > 0) {
+                    var chat = {
+                        'body': this.body,
+                        'chatter': this.chatter,
+                        'created_at': this.created_at,
+                        'avatar': this.avatar
+                    };
+
+                    this.chats.unshift(chat);
+
+                    // Send to backend
+
+                    fetch('/api/add_chat/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(chat)
+                    })
+                    .then((response) => {
+                        console.log(response);
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                    });
+                }
+
+                this.body = '';
+            }
+        }
+    })
+</script>
+{% endblock %}
